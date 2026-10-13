@@ -5,9 +5,20 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const spaceGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-spaceGradient.addColorStop(0, "#101b4d");
-spaceGradient.addColorStop(0.55, "#080e29");
-spaceGradient.addColorStop(1, "#02040d");
+spaceGradient.addColorStop(0, "#10232c");
+spaceGradient.addColorStop(0.48, "#081820");
+spaceGradient.addColorStop(1, "#040b10");
+const HUD_FONT = '"Bahnschrift", "Arial Narrow", "Trebuchet MS", sans-serif';
+const PALETTE = {
+    accent: "#75e6ca",
+    accentBright: "#b2ffe9",
+    amber: "#f2b96f",
+    text: "#e1f0ee",
+    muted: "#89a6a6",
+    panel: "rgba(8, 24, 30, 0.94)",
+    panelLight: "rgba(15, 39, 45, 0.96)",
+    line: "rgba(117, 230, 202, 0.38)",
+};
 
 const keys = {};
 
@@ -25,12 +36,15 @@ let rapidFireLevel = 0;
 let spreadShotLevel = 0;
 let speedLevel = 0;
 let creditLevel = 0;
+let pulseLevel = 0;
+let missileLevel = 0;
 let shieldCharges = 0;
 let frameScale = 1;
 let previousFrameTime = 0;
 const MAX_LIVES = 5;
 const MAX_PLAYER_BULLETS = 90;
 const MAX_ENEMY_BULLETS = 60;
+const MAX_OBSTACLE_HEALTH = 8;
 const stars = Array.from({ length: 64 }, () => ({
     x: Math.random() * canvas.width,
     y: Math.random() * canvas.height,
@@ -54,34 +68,34 @@ const playerSkins = {
     default: {
         name: "NAVE PADRÃO",
         style: "fighter",
-        hull: "#1bd8ff",
-        trim: "#d8faff",
-        wing: "#ff4f9a",
-        engine: "#ffb52e",
+        hull: "#72e3d0",
+        trim: "#d6fff4",
+        wing: "#f2b96f",
+        engine: "#ffe1a0",
     },
     neon: {
         name: "NEON",
         style: "sleek",
-        hull: "#c45bff",
-        trim: "#f4d5ff",
-        wing: "#46e5cf",
-        engine: "#ffe766",
+        hull: "#83d9d0",
+        trim: "#dcfff6",
+        wing: "#53a7aa",
+        engine: "#b9ffe8",
     },
     crimson: {
         name: "CRIMSON",
         style: "heavy",
-        hull: "#ff4e62",
-        trim: "#ffe1b8",
-        wing: "#ff9a4a",
-        engine: "#ffe766",
+        hull: "#df816d",
+        trim: "#ffe1bd",
+        wing: "#a9584f",
+        engine: "#ffd18d",
     },
     gold: {
         name: "ORO",
         style: "royal",
-        hull: "#ffc857",
-        trim: "#fff4c2",
-        wing: "#fff0b0",
-        engine: "#ff704d",
+        hull: "#e5bd72",
+        trim: "#fff0c4",
+        wing: "#a88b53",
+        engine: "#ffe3a3",
     },
 };
 const ownedSkins = new Set(["default"]);
@@ -94,17 +108,21 @@ const PLAYER_TOP_BOUNDARY = 86;
 
 const bullets = [];
 const enemyBullets = [];
+const obstacles = [];
 const bulletSpeed = 10;
+let shotSequence = 0;
 const shopItems = [
-    { id: "rapid", title: "TIRO RÁPIDO", description: "Dispare com mais frequência", baseCost: 100, color: "#46e5cf" },
-    { id: "spread", title: "TIRO TRIPLO", description: "Lance três projéteis por vez", baseCost: 150, color: "#ba73ff" },
-    { id: "life", title: "NAVE EXTRA", description: "Recupere uma vida", baseCost: 200, color: "#ff548c" },
-    { id: "shield", title: "ESCUDO", description: "Bloqueia um acerto", baseCost: 160, color: "#54a0ff" },
-    { id: "speed", title: "MOTOR TURBO", description: "Aumenta sua velocidade", baseCost: 130, color: "#ffc857" },
-    { id: "credits", title: "BÔNUS DE CRÉDITOS", description: "Mais créditos por inimigo", baseCost: 180, color: "#69e879" },
-    { id: "skin-neon", title: "SKIN NEON", description: "Nave ágil, visual neon", baseCost: 220, color: "#c45bff" },
-    { id: "skin-crimson", title: "SKIN CRIMSON", description: "Nave pesada, visual rubi", baseCost: 260, color: "#ff4e62" },
-    { id: "skin-gold", title: "SKIN ORO", description: "Nave real, visual dourado", baseCost: 300, color: "#ffc857" },
+    { id: "rapid", title: "TIRO RÁPIDO", description: "Dispare com mais frequência", baseCost: 100, color: "#75e6ca" },
+    { id: "spread", title: "TIRO TRIPLO", description: "Lance três projéteis por vez", baseCost: 150, color: "#a9b9e0" },
+    { id: "life", title: "NAVE EXTRA", description: "Recupere uma vida", baseCost: 200, color: "#ef977c" },
+    { id: "shield", title: "ESCUDO", description: "Bloqueia um acerto", baseCost: 160, color: "#82c6dc" },
+    { id: "speed", title: "MOTOR TURBO", description: "Aumenta sua velocidade", baseCost: 130, color: "#f2b96f" },
+    { id: "credits", title: "BÔNUS DE CRÉDITOS", description: "Mais créditos por inimigo", baseCost: 180, color: "#a9d79b" },
+    { id: "skin-neon", title: "SKIN NEON", description: "Nave ágil, visual neon", baseCost: 220, color: "#83d9d0" },
+    { id: "skin-crimson", title: "SKIN CRIMSON", description: "Nave pesada, visual rubi", baseCost: 260, color: "#df816d" },
+    { id: "skin-gold", title: "SKIN ORO", description: "Nave real, visual dourado", baseCost: 300, color: "#e5bd72" },
+    { id: "pulse", title: "CANHÃO DE PULSO", description: "Pulso pesado perfurante", baseCost: 240, color: "#75e6ca" },
+    { id: "missile", title: "MÍSSIL GUIADO", description: "Projétil que busca alvos", baseCost: 280, color: "#f2b96f" },
 ];
 
 //=====================
@@ -117,10 +135,10 @@ const ENEMY_COLS = 8;
 const ENEMY_WIDTH = 40;
 const ENEMY_TYPES = ["scout", "bomber", "drone", "striker"];
 const ENEMY_STYLES = {
-    scout: { color: "#ff548c", core: "#fff29a" },
-    bomber: { color: "#ff9a4a", core: "#fff0b0" },
-    drone: { color: "#46e5cf", core: "#c3fff4" },
-    striker: { color: "#ba73ff", core: "#f4d5ff" },
+    scout: { color: "#ef977c", core: "#ffe5b2" },
+    bomber: { color: "#e0b46a", core: "#fff0c8" },
+    drone: { color: "#72d7c3", core: "#d7fff3" },
+    striker: { color: "#9eacdb", core: "#e2e9ff" },
 };
 
 let enemyDirection = 1;
@@ -149,6 +167,8 @@ window.addEventListener("keydown", (event) => {
     }
     if (event.code === "Escape" && catalogOpen) {
         catalogOpen = false;
+    } else if (event.code === "Escape" && gameStarted) {
+        returnToMenu();
     }
 });
 
@@ -162,6 +182,19 @@ canvas.addEventListener("click", (event) => {
     const scaleY = canvas.height / bounds.height;
     const clickX = (event.clientX - bounds.left) * scaleX;
     const clickY = (event.clientY - bounds.top) * scaleY;
+
+    if (gameStarted) {
+        const homeButton = getHomeButtonBounds();
+        if (
+            clickX >= homeButton.x &&
+            clickX <= homeButton.x + homeButton.width &&
+            clickY >= homeButton.y &&
+            clickY <= homeButton.y + homeButton.height
+        ) {
+            returnToMenu();
+            return;
+        }
+    }
 
     if (catalogOpen) {
         const closeButton = getCatalogCloseBounds();
@@ -226,8 +259,7 @@ canvas.addEventListener("click", (event) => {
         if (gameOver) {
             resetGame();
         } else {
-            gameStarted = true;
-            nextEnemyShotAt = Date.now() + 1100;
+            resetGame();
         }
     }
 });
@@ -247,6 +279,15 @@ function getRestartButtonBounds() {
         y: canvas.height / 2 + 54,
         width: 220,
         height: 56,
+    };
+}
+
+function getHomeButtonBounds() {
+    return {
+        x: canvas.width - 96,
+        y: 23,
+        width: 72,
+        height: 40,
     };
 }
 
@@ -275,16 +316,16 @@ function getShopCardBounds(index) {
     const row = Math.floor(index / 3);
     return {
         x: canvas.width / 2 - (width * 3 + gap * 2) / 2 + col * (width + gap),
-        y: 145 + row * 112,
+        y: 145 + row * 91,
         width,
-        height: 100,
+        height: 82,
     };
 }
 
 function getContinueButtonBounds() {
     return {
         x: canvas.width / 2 - 120,
-        y: 500,
+        y: 523,
         width: 240,
         height: 48,
     };
@@ -296,6 +337,8 @@ function getPowerUpCost(item) {
         spread: spreadShotLevel,
         speed: speedLevel,
         credits: creditLevel,
+        pulse: pulseLevel,
+        missile: missileLevel,
     };
     return item.baseCost * ((item.id in levels) ? levels[item.id] + 1 : 1);
 }
@@ -309,7 +352,9 @@ function isItemMaxed(item) {
         (item.id === "spread" && spreadShotLevel >= 2) ||
         (item.id === "shield" && shieldCharges >= 3) ||
         (item.id === "speed" && speedLevel >= 3) ||
-        (item.id === "credits" && creditLevel >= 3)
+        (item.id === "credits" && creditLevel >= 3) ||
+        (item.id === "pulse" && pulseLevel >= 3) ||
+        (item.id === "missile" && missileLevel >= 1)
     );
 }
 
@@ -325,6 +370,8 @@ function getItemLevel(item) {
         shield: shieldCharges,
         speed: speedLevel,
         credits: creditLevel,
+        pulse: pulseLevel,
+        missile: missileLevel,
     };
     return item.id in levels ? `NÍVEL ${levels[item.id]}` : "";
 }
@@ -343,7 +390,9 @@ function purchasePowerUp(item) {
         (item.id === "spread" && spreadShotLevel >= 2) ||
         (item.id === "shield" && shieldCharges >= 3) ||
         (item.id === "speed" && speedLevel >= 3) ||
-        (item.id === "credits" && creditLevel >= 3)
+        (item.id === "credits" && creditLevel >= 3) ||
+        (item.id === "pulse" && pulseLevel >= 3) ||
+        (item.id === "missile" && missileLevel >= 1)
     );
     if (atLimit) return;
 
@@ -364,6 +413,10 @@ function purchasePowerUp(item) {
         player.speed = 5 + speedLevel * 0.8;
     } else if (item.id === "credits") {
         creditLevel++;
+    } else if (item.id === "pulse") {
+        pulseLevel++;
+    } else if (item.id === "missile") {
+        missileLevel++;
     } else if (skinId) {
         ownedSkins.add(skinId);
         selectedSkin = skinId;
@@ -374,7 +427,20 @@ function purchasePowerUp(item) {
 function startNextWave() {
     shopOpen = false;
     createEnemies();
+    createObstacles();
     nextEnemyShotAt = Date.now() + 900;
+}
+
+function returnToMenu() {
+    gameStarted = false;
+    gameOver = false;
+    shopOpen = false;
+    catalogOpen = false;
+    keys.Space = false;
+    bullets.length = 0;
+    enemyBullets.length = 0;
+    shotSequence = 0;
+    obstacles.length = 0;
 }
 
 function applySkinStats() {
@@ -434,11 +500,32 @@ function createEnemies() {
     }
 }
 
+function createObstacles() {
+    obstacles.length = 0;
+    const positions = [
+        { x: 112, y: 318 },
+        { x: 282, y: 354 },
+        { x: 452, y: 318 },
+        { x: 622, y: 354 },
+    ];
+    positions.forEach((position, index) => {
+        obstacles.push({
+            x: position.x,
+            y: position.y,
+            width: 54,
+            height: 28,
+            health: MAX_OBSTACLE_HEALTH,
+            variant: index,
+        });
+    });
+}
+
 //=====================
 //ATIRAR
 //=====================
 
 function shoot() {
+    shotSequence++;
     const shotOffsets = spreadShotLevel >= 2
         ? [-20, -10, 0, 10, 20]
         : spreadShotLevel === 1
@@ -458,6 +545,36 @@ function shoot() {
             maxHits: selectedSkin === "crimson" ? 2 : 1,
         });
     }
+
+    if (pulseLevel > 0 && bullets.length < MAX_PLAYER_BULLETS) {
+        bullets.push({
+            x: player.x + player.width / 2 - 4,
+            y: player.y - 2,
+            width: 8,
+            height: 23,
+            color: "#9affea",
+            speed: 11 + pulseLevel * 0.8,
+            hits: 0,
+            maxHits: 1 + pulseLevel + (selectedSkin === "crimson" ? 1 : 0),
+            kind: "pulse",
+        });
+    }
+
+    if (missileLevel > 0 && shotSequence % 3 === 0 && bullets.length < MAX_PLAYER_BULLETS) {
+        bullets.push({
+            x: player.x + player.width / 2 - 5,
+            y: player.y - 6,
+            width: 10,
+            height: 15,
+            color: "#ffc879",
+            vx: 0,
+            vy: -5.4,
+            speed: 5.4,
+            hits: 0,
+            maxHits: 1,
+            kind: "missile",
+        });
+    }
 }
 
 //=====================
@@ -465,6 +582,8 @@ function shoot() {
 //=====================
 
 function updatePlayer() {
+    const previousX = player.x;
+    const previousY = player.y;
     if ((keys["ArrowLeft"] || keys["KeyA"]) && player.x > 0) {
         player.x -= player.speed * frameScale;
     }
@@ -482,6 +601,11 @@ function updatePlayer() {
 
     if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
     if (player.y > canvas.height - player.height - 16) player.y = canvas.height - player.height - 16;
+
+    if (obstacles.some(obstacle => isColliding(player, obstacle))) {
+        player.x = previousX;
+        player.y = previousY;
+    }
 }
 
 //=====================
@@ -491,6 +615,16 @@ function updatePlayer() {
 function updateBullets() {
     for (let i = bullets.length - 1; i >= 0; i--) {
         const bullet = bullets[i];
+        if (bullet.kind === "missile") {
+            const target = enemies.find(enemy => enemy.alive);
+            if (target) {
+                const targetX = target.x + target.width / 2;
+                const bulletX = bullet.x + bullet.width / 2;
+                bullet.vx += Math.max(-0.22, Math.min(0.22, (targetX - bulletX) * 0.003));
+                bullet.vx = Math.max(-3.2, Math.min(3.2, bullet.vx));
+                bullet.vy = -Math.max(3.8, bullet.speed - Math.abs(bullet.vx) * 0.28);
+            }
+        }
         bullet.x += (bullet.vx || 0) * frameScale;
         bullet.y += bullet.vy !== undefined
             ? bullet.vy * frameScale
@@ -508,14 +642,24 @@ function updateBullets() {
         bullet.angle = (bullet.angle || 0) + (bullet.spin || 0.08);
         if (bullet.y > canvas.height || bullet.x < -20 || bullet.x > canvas.width + 20) {
             enemyBullets.splice(i, 1);
-        } else if (
-            Date.now() >= playerInvulnerableUntil &&
-            isColliding(bullet, player)
-        ) {
-            enemyBullets.splice(i, 1);
-            damagePlayer();
+        } else {
+            const obstacle = obstacles.find(candidate => candidate.health > 0 && isColliding(bullet, candidate));
+            if (obstacle) {
+                obstacle.health--;
+                enemyBullets.splice(i, 1);
+                continue;
+            }
+            if (
+                Date.now() >= playerInvulnerableUntil &&
+                isColliding(bullet, player)
+            ) {
+                enemyBullets.splice(i, 1);
+                damagePlayer();
+                return;
+            }
         }
     }
+    removeDestroyedObstacles();
 }
 
 //=====================
@@ -670,14 +814,22 @@ function isColliding(a,b) {
 
 function detectCollisions() {
     for (let b = bullets.length - 1; b >= 0; b--) {
+        const bullet = bullets[b];
+        const obstacle = obstacles.find(candidate => candidate.health > 0 && isColliding(bullet, candidate));
+        if (obstacle) {
+            obstacle.health -= bullet.kind === "pulse" ? 2 : 1;
+            bullets.splice(b, 1);
+            continue;
+        }
+
         for (const enemy of enemies) {
-            if (enemy.alive && isColliding(bullets[b], enemy)) {
+            if (enemy.alive && isColliding(bullet, enemy)) {
                 enemy.alive = false;
                 const reward = { scout: 20, bomber: 45, drone: 35, striker: 50 }[enemy.type] || 20;
                 const skinBonus = selectedSkin === "gold" ? 1.25 : 1;
                 score += Math.round(reward * (1 + creditLevel * 0.25) * skinBonus);
-                bullets[b].hits++;
-                if (bullets[b].hits >= bullets[b].maxHits) {
+                bullet.hits++;
+                if (bullet.hits >= bullet.maxHits) {
                     bullets.splice(b, 1);
                     break;
                 }
@@ -686,12 +838,21 @@ function detectCollisions() {
         }
     }
 
+    removeDestroyedObstacles();
     const remainingEnemies = enemies.filter(enemy => enemy.alive);
     if (remainingEnemies.length === 0 && !shopOpen) {
         wave++;
         enemySpeed = Math.min(enemySpeed + 0.5, 6);
         enemyBullets.length = 0;
         shopOpen = true;
+    }
+}
+
+function removeDestroyedObstacles() {
+    for (let index = obstacles.length - 1; index >= 0; index--) {
+        if (obstacles[index].health <= 0) {
+            obstacles.splice(index, 1);
+        }
     }
 }
 
@@ -706,36 +867,46 @@ function drawPlayer() {
     const centerX = player.width / 2;
     const centerY = player.height / 2;
     const skin = playerSkins[selectedSkin];
-    const flameLength = 9 + Math.sin(Date.now() / 70) * 4;
+    const flameLength = 8 + Math.sin(Date.now() / 85) * 3;
 
     ctx.shadowColor = skin.hull;
-    ctx.shadowBlur = 16;
+    ctx.shadowBlur = 10;
     ctx.fillStyle = skin.hull;
     ctx.beginPath();
     if (skin.style === "heavy") {
-        ctx.moveTo(centerX, -6);
-        ctx.lineTo(player.width - 1, player.height - 5);
-        ctx.lineTo(player.width - 8, player.height);
-        ctx.lineTo(centerX, player.height - 8);
-        ctx.lineTo(8, player.height);
-        ctx.lineTo(1, player.height - 5);
+        ctx.moveTo(centerX, -4);
+        ctx.lineTo(player.width - 3, 5);
+        ctx.lineTo(player.width - 8, player.height - 1);
+        ctx.lineTo(centerX + 10, player.height - 4);
+        ctx.lineTo(centerX, player.height + 1);
+        ctx.lineTo(centerX - 10, player.height - 4);
+        ctx.lineTo(8, player.height - 1);
+        ctx.lineTo(3, 5);
     } else if (skin.style === "royal") {
         ctx.moveTo(centerX, -10);
-        ctx.lineTo(player.width - 2, player.height - 4);
-        ctx.lineTo(centerX + 8, player.height - 5);
+        ctx.lineTo(centerX + 8, 2);
+        ctx.lineTo(player.width - 1, player.height - 3);
+        ctx.lineTo(centerX + 7, player.height - 7);
         ctx.lineTo(centerX, player.height + 1);
-        ctx.lineTo(centerX - 8, player.height - 5);
-        ctx.lineTo(2, player.height - 4);
+        ctx.lineTo(centerX - 7, player.height - 7);
+        ctx.lineTo(1, player.height - 3);
+        ctx.lineTo(centerX - 8, 2);
     } else if (skin.style === "sleek") {
-        ctx.moveTo(centerX, -10);
-        ctx.lineTo(player.width - 7, player.height - 2);
-        ctx.lineTo(centerX, player.height - 11);
-        ctx.lineTo(7, player.height - 2);
-    } else {
-        ctx.moveTo(centerX, -8);
-        ctx.lineTo(player.width - 4, player.height - 3);
+        ctx.moveTo(centerX, -11);
+        ctx.lineTo(centerX + 6, 5);
+        ctx.lineTo(player.width - 3, player.height - 1);
         ctx.lineTo(centerX, player.height - 9);
-        ctx.lineTo(4, player.height - 3);
+        ctx.lineTo(3, player.height - 1);
+        ctx.lineTo(centerX - 6, 5);
+    } else {
+        ctx.moveTo(centerX, -10);
+        ctx.lineTo(centerX + 8, 5);
+        ctx.lineTo(player.width - 2, player.height - 2);
+        ctx.lineTo(centerX + 6, player.height - 7);
+        ctx.lineTo(centerX, player.height - 3);
+        ctx.lineTo(centerX - 6, player.height - 7);
+        ctx.lineTo(2, player.height - 2);
+        ctx.lineTo(centerX - 8, 5);
     }
     ctx.closePath();
     ctx.fill();
@@ -743,57 +914,65 @@ function drawPlayer() {
     ctx.shadowBlur = 0;
     ctx.fillStyle = skin.trim;
     ctx.beginPath();
-    ctx.moveTo(centerX, -4);
-    ctx.lineTo(player.width - 10, player.height - 6);
-    ctx.lineTo(centerX, player.height - 12);
-    ctx.lineTo(10, player.height - 6);
+    ctx.moveTo(centerX, -5);
+    ctx.lineTo(centerX + 3, 5);
+    ctx.lineTo(player.width - 13, player.height - 5);
+    ctx.lineTo(centerX, player.height - 11);
+    ctx.lineTo(13, player.height - 5);
+    ctx.lineTo(centerX - 3, 5);
     ctx.closePath();
     ctx.fill();
 
     ctx.fillStyle = skin.wing;
     ctx.beginPath();
-    ctx.moveTo(7, player.height - 5);
-    ctx.lineTo(-3, player.height + 2);
-    ctx.lineTo(20, player.height - 7);
+    ctx.moveTo(8, player.height - 7);
+    ctx.lineTo(1, player.height + 2);
+    ctx.lineTo(19, player.height - 8);
     ctx.closePath();
     ctx.fill();
 
     ctx.beginPath();
-    ctx.moveTo(player.width - 7, player.height - 5);
-    ctx.lineTo(player.width + 3, player.height + 2);
-    ctx.lineTo(player.width - 20, player.height - 7);
+    ctx.moveTo(player.width - 8, player.height - 7);
+    ctx.lineTo(player.width - 1, player.height + 2);
+    ctx.lineTo(player.width - 19, player.height - 8);
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = skin.hull;
+    ctx.strokeStyle = "rgba(238, 255, 250, 0.72)";
+    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(centerX, -5);
-    ctx.lineTo(centerX + 5, 10);
-    ctx.lineTo(centerX, 14);
-    ctx.lineTo(centerX - 5, 10);
-    ctx.closePath();
+    ctx.lineTo(centerX, player.height - 9);
+    ctx.moveTo(centerX - 13, 16);
+    ctx.lineTo(centerX - 7, 19);
+    ctx.lineTo(centerX - 2, 16);
+    ctx.moveTo(centerX + 13, 16);
+    ctx.lineTo(centerX + 7, 19);
+    ctx.lineTo(centerX + 2, 16);
+    ctx.stroke();
+
+    ctx.fillStyle = "#142c31";
+    ctx.beginPath();
+    ctx.ellipse(centerX, 7, 3.5, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = skin.trim;
+    ctx.beginPath();
+    ctx.ellipse(centerX, 6, 1.5, 2.8, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.arc(centerX, 9, 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = skin.engine;
-    ctx.beginPath();
-    ctx.moveTo(centerX - 5, player.height - 4);
-    ctx.lineTo(centerX + 5, player.height - 4);
-    ctx.lineTo(centerX, player.height + flameLength);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = "#e8fcff";
-    ctx.beginPath();
-    ctx.moveTo(centerX - 2, player.height - 3);
-    ctx.lineTo(centerX + 2, player.height - 3);
-    ctx.lineTo(centerX, player.height + flameLength * 0.55);
-    ctx.closePath();
-    ctx.fill();
+    for (const engineX of [centerX - 14, centerX + 14]) {
+        ctx.fillStyle = "#142c31";
+        ctx.beginPath();
+        ctx.roundRect(engineX - 3, player.height - 5, 6, 8, 2);
+        ctx.fill();
+        ctx.fillStyle = skin.engine;
+        ctx.beginPath();
+        ctx.moveTo(engineX - 2, player.height + 1);
+        ctx.lineTo(engineX + 2, player.height + 1);
+        ctx.lineTo(engineX, player.height + flameLength);
+        ctx.closePath();
+        ctx.fill();
+    }
     ctx.restore();
 
     if (shieldCharges > 0 || Date.now() < playerInvulnerableUntil) {
@@ -821,18 +1000,80 @@ function drawPlayer() {
 //DESENHO TIROS
 //=====================
 
+function drawObstacles() {
+    obstacles.forEach((obstacle) => {
+        const integrity = obstacle.health / MAX_OBSTACLE_HEALTH;
+        ctx.save();
+        ctx.translate(obstacle.x, obstacle.y);
+        ctx.shadowColor = integrity > 0.5 ? "#68cbbb" : "#e5a66a";
+        ctx.shadowBlur = 9;
+        ctx.fillStyle = integrity > 0.5 ? "#294d4d" : "#55443a";
+        ctx.strokeStyle = integrity > 0.5 ? "#75e6ca" : "#f2b96f";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(5, 2);
+        ctx.lineTo(obstacle.width - 9, 0);
+        ctx.lineTo(obstacle.width - 2, 7);
+        ctx.lineTo(obstacle.width - 5, obstacle.height - 4);
+        ctx.lineTo(obstacle.width - 15, obstacle.height - 1);
+        ctx.lineTo(8, obstacle.height - 3);
+        ctx.lineTo(1, obstacle.height - 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "rgba(185, 239, 220, 0.52)";
+        ctx.beginPath();
+        ctx.moveTo(13 + obstacle.variant * 2, 5);
+        ctx.lineTo(23, 12);
+        ctx.lineTo(18, 20);
+        ctx.moveTo(23, 12);
+        ctx.lineTo(38, 8);
+        ctx.stroke();
+        ctx.fillStyle = PALETTE.accent;
+        ctx.fillRect(4, obstacle.height + 4, (obstacle.width - 8) * integrity, 2);
+        ctx.restore();
+    });
+}
+
 function drawBullets() {
     bullets.forEach((bullet) => {
         ctx.save();
+        ctx.translate(bullet.x + bullet.width / 2, bullet.y + bullet.height / 2);
         ctx.shadowColor = bullet.color || playerSkins[selectedSkin].hull;
-        ctx.shadowBlur = 8;
-        ctx.fillStyle = bullet.color || "#ffe766";
-        ctx.fillRect(
-            bullet.x, 
-            bullet.y, 
-            bullet.width, 
-            bullet.height
-        );
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = bullet.color || PALETTE.accentBright;
+        if (bullet.kind === "pulse") {
+            ctx.beginPath();
+            ctx.roundRect(-bullet.width / 2, -bullet.height / 2, bullet.width, bullet.height, 3);
+            ctx.fill();
+            ctx.fillStyle = "#effff8";
+            ctx.fillRect(-1.2, -bullet.height / 2 + 3, 2.4, bullet.height - 6);
+        } else if (bullet.kind === "missile") {
+            ctx.rotate(Math.atan2(bullet.vy, bullet.vx) + Math.PI / 2);
+            ctx.beginPath();
+            ctx.moveTo(0, -bullet.height / 2);
+            ctx.lineTo(bullet.width / 2, 2);
+            ctx.lineTo(2, bullet.height / 2);
+            ctx.lineTo(-2, bullet.height / 2);
+            ctx.lineTo(-bullet.width / 2, 2);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = "#fff1d2";
+            ctx.fillRect(-1, -2, 2, 6);
+        } else {
+            ctx.beginPath();
+            ctx.moveTo(0, -bullet.height / 2);
+            ctx.lineTo(bullet.width / 2, -bullet.height / 5);
+            ctx.lineTo(bullet.width / 2, bullet.height / 2);
+            ctx.lineTo(-bullet.width / 2, bullet.height / 2);
+            ctx.lineTo(-bullet.width / 2, -bullet.height / 5);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = "#f3fff9";
+            ctx.fillRect(-0.8, -bullet.height / 3, 1.6, bullet.height / 2);
+        }
         ctx.restore();
     });
 
@@ -844,24 +1085,24 @@ function drawBullets() {
         ctx.rotate(bullet.angle || 0);
 
         if (bullet.type === "orb") {
-            ctx.shadowColor = "#ff8b47";
+            ctx.shadowColor = "#f2b96f";
             ctx.shadowBlur = 9;
-            ctx.fillStyle = "#e63564";
+            ctx.fillStyle = "#ad654e";
             ctx.beginPath();
             ctx.arc(0, 0, bullet.width / 2, 0, Math.PI * 2);
             ctx.fill();
-            ctx.fillStyle = "#ff9a4a";
+            ctx.fillStyle = "#e6a86d";
             ctx.beginPath();
             ctx.arc(-1, -1, bullet.width / 3.3, 0, Math.PI * 2);
             ctx.fill();
-            ctx.fillStyle = "#fff3a6";
+            ctx.fillStyle = "#fff0c8";
             ctx.beginPath();
             ctx.arc(-2, -3, bullet.width / 7, 0, Math.PI * 2);
             ctx.fill();
         } else if (bullet.type === "mine") {
-            ctx.shadowColor = "#ba73ff";
+            ctx.shadowColor = "#83d9d0";
             ctx.shadowBlur = 15;
-            ctx.fillStyle = "#bd78ff";
+            ctx.fillStyle = "#4ca99d";
             ctx.beginPath();
             for (let point = 0; point < 8; point++) {
                 const radius = point % 2 === 0 ? bullet.width / 2 : bullet.width / 3.1;
@@ -873,14 +1114,14 @@ function drawBullets() {
             }
             ctx.closePath();
             ctx.fill();
-            ctx.fillStyle = "#f7d8ff";
+            ctx.fillStyle = "#d7fff3";
             ctx.beginPath();
             ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
             ctx.fill();
         } else if (bullet.type === "bolt") {
-            ctx.shadowColor = "#ff5478";
+            ctx.shadowColor = "#df816d";
             ctx.shadowBlur = 12;
-            ctx.fillStyle = "#ff5478";
+            ctx.fillStyle = "#df816d";
             ctx.beginPath();
             ctx.moveTo(0, -bullet.height);
             ctx.lineTo(bullet.width / 2, 0);
@@ -888,12 +1129,12 @@ function drawBullets() {
             ctx.lineTo(-bullet.width / 2, 0);
             ctx.closePath();
             ctx.fill();
-            ctx.fillStyle = "#ffd0dc";
+            ctx.fillStyle = "#fff0dc";
             ctx.fillRect(-1, -bullet.height / 2, 2, bullet.height);
         } else {
-            ctx.shadowColor = "#ffe766";
+            ctx.shadowColor = "#f2d390";
             ctx.shadowBlur = 10;
-            ctx.fillStyle = "#ffe766";
+            ctx.fillStyle = "#f2d390";
             ctx.beginPath();
             ctx.moveTo(0, -bullet.height);
             ctx.lineTo(bullet.width / 2, 0);
@@ -922,10 +1163,19 @@ function drawBackground() {
         }
 
         ctx.globalAlpha = star.opacity * (0.75 + Math.sin(Date.now() / 500 + star.x) * 0.25);
-        ctx.fillStyle = "#d9f5ff";
+        ctx.fillStyle = "#c3eee5";
         ctx.fillRect(star.x, star.y, star.size, star.size);
     }
     ctx.globalAlpha = 1;
+
+    ctx.strokeStyle = "rgba(117, 230, 202, 0.035)";
+    ctx.lineWidth = 1;
+    for (let y = 120; y < canvas.height; y += 80) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
 }
 
 function drawEnemies() {
@@ -940,7 +1190,7 @@ function drawEnemies() {
         const style = ENEMY_STYLES[enemy.type];
 
         ctx.shadowColor = style.color;
-        ctx.shadowBlur = 13;
+        ctx.shadowBlur = 8;
         ctx.fillStyle = style.color;
         ctx.strokeStyle = style.color;
         ctx.lineWidth = 2;
@@ -957,7 +1207,7 @@ function drawEnemies() {
             ctx.closePath();
             ctx.fill();
             ctx.shadowBlur = 0;
-            ctx.fillStyle = "#702f53";
+            ctx.fillStyle = "#70493b";
             ctx.beginPath();
             ctx.ellipse(centerX, centerY + 1, 7, 9, 0, 0, Math.PI * 2);
             ctx.fill();
@@ -978,7 +1228,7 @@ function drawEnemies() {
             ctx.closePath();
             ctx.fill();
             ctx.shadowBlur = 0;
-            ctx.fillStyle = "#154e66";
+            ctx.fillStyle = "#17443f";
             ctx.beginPath();
             ctx.arc(centerX, centerY, 5, 0, Math.PI * 2);
             ctx.fill();
@@ -1001,7 +1251,7 @@ function drawEnemies() {
             ctx.closePath();
             ctx.fill();
             ctx.shadowBlur = 0;
-            ctx.fillStyle = "#392164";
+            ctx.fillStyle = "#373747";
             ctx.beginPath();
             ctx.moveTo(centerX, 7);
             ctx.lineTo(centerX + 6, centerY);
@@ -1019,33 +1269,45 @@ function drawEnemies() {
             ctx.lineTo(enemy.width - 2, 3);
             ctx.stroke();
         } else {
-            ctx.ellipse(centerX, centerY + 2, centerX - 2, 8, 0, 0, Math.PI * 2);
+            ctx.moveTo(centerX, 1);
+            ctx.lineTo(enemy.width - 5, 7);
+            ctx.lineTo(enemy.width - 1, centerY);
+            ctx.lineTo(enemy.width - 7, enemy.height - 2);
+            ctx.lineTo(centerX + 5, enemy.height - 5);
+            ctx.lineTo(centerX, enemy.height - 1);
+            ctx.lineTo(centerX - 5, enemy.height - 5);
+            ctx.lineTo(7, enemy.height - 2);
+            ctx.lineTo(1, centerY);
+            ctx.lineTo(5, 7);
+            ctx.closePath();
             ctx.fill();
             ctx.shadowBlur = 0;
-            ctx.fillStyle = "#57294c";
+            ctx.fillStyle = "#243538";
             ctx.beginPath();
-            ctx.arc(centerX, centerY - 1, 7, Math.PI, 0);
+            ctx.moveTo(centerX - 10, centerY - 1);
+            ctx.lineTo(centerX - 6, centerY - 6);
+            ctx.lineTo(centerX + 6, centerY - 6);
+            ctx.lineTo(centerX + 10, centerY - 1);
+            ctx.lineTo(centerX + 6, centerY + 5);
+            ctx.lineTo(centerX - 6, centerY + 5);
+            ctx.closePath();
             ctx.fill();
             ctx.fillStyle = style.core;
-            for (const eyeX of [centerX - 8, centerX + 8]) {
-                ctx.beginPath();
-                ctx.ellipse(eyeX, centerY + 2, 3, 4, 0, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.fillStyle = "#32134d";
-            for (const eyeX of [centerX - 8, centerX + 8]) {
-                ctx.beginPath();
-                ctx.arc(eyeX, centerY + 2, 1.3, 0, Math.PI * 2);
-                ctx.fill();
-            }
+            ctx.fillRect(centerX - 6, centerY - 1, 12, 2);
+            ctx.fillStyle = style.color;
+            ctx.fillRect(centerX - 2, centerY - 2, 4, 4);
             ctx.strokeStyle = style.color;
             ctx.beginPath();
-            ctx.moveTo(8, enemy.height - 3);
-            ctx.lineTo(3, enemy.height);
-            ctx.moveTo(enemy.width - 8, enemy.height - 3);
-            ctx.lineTo(enemy.width - 3, enemy.height);
-            ctx.moveTo(centerX, 6);
-            ctx.lineTo(centerX, 1);
+            ctx.moveTo(8, 9);
+            ctx.lineTo(3, 3);
+            ctx.lineTo(11, 6);
+            ctx.moveTo(enemy.width - 8, 9);
+            ctx.lineTo(enemy.width - 3, 3);
+            ctx.lineTo(enemy.width - 11, 6);
+            ctx.moveTo(7, enemy.height - 3);
+            ctx.lineTo(12, enemy.height - 7);
+            ctx.moveTo(enemy.width - 7, enemy.height - 3);
+            ctx.lineTo(enemy.width - 12, enemy.height - 7);
             ctx.stroke();
         }
 
@@ -1059,30 +1321,25 @@ function drawEnemies() {
 
 function drawHUD() {
     ctx.save();
-    ctx.fillStyle = "rgba(6, 13, 37, 0.88)";
-    ctx.strokeStyle = "rgba(112, 183, 255, 0.32)";
-    ctx.lineWidth = 1;
-    roundedRect(18, 16, canvas.width - 36, 58, 12);
-    ctx.fill();
-    ctx.stroke();
+    drawTechPanel(18, 16, canvas.width - 36, 58, PALETTE.accent);
 
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.font = "11px Arial";
-    ctx.fillStyle = "#8fa9d9";
+    ctx.font = `10px ${HUD_FONT}`;
+    ctx.fillStyle = PALETTE.muted;
     ctx.fillText("CRÉDITOS", 38, 33);
-    ctx.fillText("ONDA", canvas.width / 2 - 27, 33);
-    ctx.fillText("VIDAS", canvas.width - 165, 33);
+    ctx.fillText("SETOR / ONDA", canvas.width / 2 - 42, 33);
+    ctx.fillText("CASCO", canvas.width - 205, 33);
 
-    ctx.font = "bold 20px Arial";
-    ctx.fillStyle = "#f4f8ff";
+    ctx.font = `bold 19px ${HUD_FONT}`;
+    ctx.fillStyle = PALETTE.text;
     ctx.fillText(String(score).padStart(5, "0"), 38, 55);
     ctx.fillText(String(wave).padStart(2, "0"), canvas.width / 2 - 27, 55);
 
     for (let i = 0; i < MAX_LIVES; i++) {
-        const x = canvas.width - 165 + i * 24;
-        ctx.fillStyle = i < lives ? "#46e5cf" : "rgba(143, 169, 217, 0.25)";
-        ctx.shadowColor = i < lives ? "#46e5cf" : "transparent";
+        const x = canvas.width - 205 + i * 22;
+        ctx.fillStyle = i < lives ? PALETTE.accent : "rgba(143, 169, 169, 0.2)";
+        ctx.shadowColor = i < lives ? PALETTE.accent : "transparent";
         ctx.shadowBlur = i < lives ? 8 : 0;
         ctx.beginPath();
         ctx.moveTo(x + 9, 47);
@@ -1094,11 +1351,15 @@ function drawHUD() {
     }
     ctx.shadowBlur = 0;
     ctx.textAlign = "center";
-    ctx.font = "11px Arial";
-    ctx.fillStyle = shieldCharges > 0 ? "#80bdff" : "#68779a";
-    ctx.fillText(`ESCUDO ${shieldCharges}`, canvas.width - 267, 51);
+    ctx.font = `10px ${HUD_FONT}`;
+    ctx.fillStyle = shieldCharges > 0 ? "#82c6dc" : "#617779";
+    ctx.fillText(`SHIELD ${shieldCharges}`, canvas.width - 282, 51);
     ctx.textAlign = "left";
     ctx.restore();
+}
+
+function drawHomeButton() {
+    drawTechButton(getHomeButtonBounds(), "MENU", false);
 }
 
 function roundedRect(x, y, width, height, radius) {
@@ -1106,91 +1367,131 @@ function roundedRect(x, y, width, height, radius) {
     ctx.roundRect(x, y, width, height, radius);
 }
 
+function drawTechPanel(x, y, width, height, accent = PALETTE.accent, fill = PALETTE.panel) {
+    const cut = Math.min(12, height / 4, width / 8);
+    ctx.beginPath();
+    ctx.moveTo(x + cut, y);
+    ctx.lineTo(x + width - cut, y);
+    ctx.lineTo(x + width, y + cut);
+    ctx.lineTo(x + width, y + height - cut);
+    ctx.lineTo(x + width - cut, y + height);
+    ctx.lineTo(x + cut, y + height);
+    ctx.lineTo(x, y + height - cut);
+    ctx.lineTo(x, y + cut);
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.strokeStyle = PALETTE.line;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + 2, y + cut + 6);
+    ctx.lineTo(x + 2, y + cut);
+    ctx.lineTo(x + cut, y + 2);
+    ctx.lineTo(x + cut + 14, y + 2);
+    ctx.moveTo(x + width - cut - 14, y + 2);
+    ctx.lineTo(x + width - cut, y + 2);
+    ctx.lineTo(x + width - 2, y + cut);
+    ctx.lineTo(x + width - 2, y + cut + 6);
+    ctx.stroke();
+}
+
+function drawTechButton(bounds, label, primary = true) {
+    ctx.save();
+    drawTechPanel(
+        bounds.x,
+        bounds.y,
+        bounds.width,
+        bounds.height,
+        primary ? PALETTE.accent : PALETTE.amber,
+        primary ? "rgba(35, 82, 78, 0.96)" : "rgba(11, 30, 36, 0.96)"
+    );
+    if (primary) {
+        ctx.fillStyle = "rgba(117, 230, 202, 0.08)";
+        ctx.fillRect(bounds.x + 4, bounds.y + 4, bounds.width - 8, bounds.height - 8);
+    }
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = primary ? PALETTE.accentBright : PALETTE.text;
+    ctx.font = `bold 15px ${HUD_FONT}`;
+    ctx.fillText(label, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    ctx.restore();
+}
+
 function drawStartScreen() {
-    ctx.fillStyle = "rgba(2, 5, 19, 0.68)";
+    ctx.fillStyle = "rgba(3, 12, 16, 0.76)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.shadowColor = "#46e5cf";
-    ctx.shadowBlur = 24;
-    ctx.fillStyle = "#f4f8ff";
-    ctx.font = "bold 54px Arial";
-    ctx.fillText("SPACE INVADERS", canvas.width / 2, canvas.height / 2 - 90);
-
+    drawTechPanel(90, 102, 620, 395, PALETTE.accent, "rgba(6, 19, 24, 0.9)");
+    ctx.fillStyle = PALETTE.muted;
+    ctx.font = `11px ${HUD_FONT}`;
+    ctx.fillText("SISTEMA DE DEFESA ORBITAL  /  TERMINAL 07", canvas.width / 2, 148);
+    ctx.shadowColor = PALETTE.accent;
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = PALETTE.text;
+    ctx.font = `bold 48px ${HUD_FONT}`;
+    ctx.fillText("SPACE INVADERS", canvas.width / 2, canvas.height / 2 - 94);
     ctx.shadowBlur = 0;
-    ctx.fillStyle = "#aabce5";
-    ctx.font = "17px Arial";
+    ctx.fillStyle = PALETTE.accent;
+    ctx.fillRect(canvas.width / 2 - 72, canvas.height / 2 - 61, 144, 2);
+    ctx.fillStyle = PALETTE.muted;
+    ctx.font = `16px ${HUD_FONT}`;
     ctx.fillText("Defenda a galáxia e sobreviva às ondas inimigas", canvas.width / 2, canvas.height / 2 - 43);
-    ctx.font = "14px Arial";
+    ctx.font = `13px ${HUD_FONT}`;
+    ctx.fillStyle = PALETTE.text;
     ctx.fillText("Mova: setas ou W A S D     Atire: ESPAÇO", canvas.width / 2, canvas.height / 2 + 20);
 
     const button = getStartButtonBounds();
-    ctx.fillStyle = "#1bd8ff";
-    ctx.shadowColor = "#1bd8ff";
-    ctx.shadowBlur = 18;
-    roundedRect(button.x, button.y, button.width, button.height, 12);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "#061126";
-    ctx.font = "bold 18px Arial";
-    ctx.fillText("INICIAR JOGO", button.x + button.width / 2, button.y + button.height / 2);
-
+    drawTechButton(button, "INICIAR MISSÃO");
     const catalogButton = getCatalogButtonBounds();
-    ctx.fillStyle = "rgba(20, 35, 75, 0.96)";
-    ctx.strokeStyle = "#46e5cf";
-    ctx.lineWidth = 2;
-    roundedRect(catalogButton.x, catalogButton.y, catalogButton.width, catalogButton.height, 12);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = "#46e5cf";
-    ctx.font = "bold 18px Arial";
-    ctx.fillText("CATÁLOGO", catalogButton.x + catalogButton.width / 2, catalogButton.y + catalogButton.height / 2);
+    drawTechButton(catalogButton, "ARQUIVO GALÁCTICO", false);
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
 }
 
 function drawCatalog() {
-    ctx.fillStyle = "rgba(2, 5, 19, 0.92)";
+    ctx.fillStyle = "rgba(3, 12, 16, 0.94)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "#f4f8ff";
-    ctx.shadowColor = "#46e5cf";
+    ctx.fillStyle = PALETTE.text;
+    ctx.shadowColor = PALETTE.accent;
     ctx.shadowBlur = 16;
-    ctx.font = "bold 34px Arial";
-    ctx.fillText("CATÁLOGO GALÁCTICO", canvas.width / 2, 63);
+    ctx.font = `bold 31px ${HUD_FONT}`;
+    ctx.fillText("ARQUIVO GALÁCTICO", canvas.width / 2, 63);
     ctx.shadowBlur = 0;
-    ctx.font = "14px Arial";
-    ctx.fillStyle = "#aabce5";
+    ctx.font = `13px ${HUD_FONT}`;
+    ctx.fillStyle = PALETTE.muted;
     ctx.fillText("Equipamentos, classes inimigas e skins disponíveis", canvas.width / 2, 94);
 
     const columns = [
-        { x: 24, title: "LOJA", color: "#46e5cf" },
-        { x: 280, title: "INIMIGOS", color: "#ff9a4a" },
-        { x: 536, title: "SKINS", color: "#ba73ff" },
+        { x: 24, title: "EQUIPAMENTOS", color: PALETTE.accent },
+        { x: 280, title: "CONTATOS HOSTIS", color: PALETTE.amber },
+        { x: 536, title: "CONFIGURAÇÕES DE NAVE", color: "#a9b9e0" },
     ];
     for (const column of columns) {
-        ctx.fillStyle = "rgba(11, 20, 51, 0.9)";
-        ctx.strokeStyle = "rgba(112, 183, 255, 0.3)";
-        roundedRect(column.x, 120, 240, 376, 12);
-        ctx.fill();
-        ctx.stroke();
+        drawTechPanel(column.x, 120, 240, 376, column.color, "rgba(8, 24, 30, 0.92)");
         ctx.fillStyle = column.color;
-        ctx.font = "bold 16px Arial";
+        ctx.font = `bold 13px ${HUD_FONT}`;
         ctx.fillText(column.title, column.x + 120, 145);
     }
 
     ctx.textAlign = "left";
-    ctx.font = "bold 12px Arial";
+    ctx.font = `bold 10px ${HUD_FONT}`;
     shopItems.forEach((item, index) => {
-        const y = 174 + index * 34;
+        const y = 170 + index * 27;
         ctx.fillStyle = item.color;
-        ctx.fillText(item.title, 38, y);
-        ctx.font = "10px Arial";
-        ctx.fillStyle = "#aabce5";
-        ctx.fillText(item.description, 38, y + 14, 210);
-        ctx.font = "bold 12px Arial";
+        ctx.font = `bold 10px ${HUD_FONT}`;
+        ctx.fillText(item.title, 38, y, 210);
+        ctx.font = `9px ${HUD_FONT}`;
+        ctx.fillStyle = PALETTE.muted;
+        ctx.fillText(item.description, 38, y + 12, 210);
+        ctx.font = `bold 10px ${HUD_FONT}`;
     });
 
     const enemyCatalog = [
@@ -1202,10 +1503,10 @@ function drawCatalog() {
     enemyCatalog.forEach(([name, description], index) => {
         const y = 184 + index * 70;
         ctx.fillStyle = ENEMY_STYLES[ENEMY_TYPES[index]].color;
-        ctx.font = "bold 13px Arial";
+        ctx.font = `bold 12px ${HUD_FONT}`;
         ctx.fillText(name, 294, y);
-        ctx.fillStyle = "#aabce5";
-        ctx.font = "11px Arial";
+        ctx.fillStyle = PALETTE.muted;
+        ctx.font = `11px ${HUD_FONT}`;
         ctx.fillText(description, 294, y + 20, 210);
         ctx.fillStyle = ENEMY_STYLES[ENEMY_TYPES[index]].color;
         ctx.beginPath();
@@ -1223,11 +1524,11 @@ function drawCatalog() {
         ctx.lineTo(541, y + 8);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = "#f4f8ff";
-        ctx.font = "bold 12px Arial";
+        ctx.fillStyle = PALETTE.text;
+        ctx.font = `bold 11px ${HUD_FONT}`;
         ctx.fillText(skin.name, 572, y - 3);
-        ctx.fillStyle = selectedSkin === id ? "#46e5cf" : ownedSkins.has(id) ? "#aabce5" : "#ff9ba7";
-        ctx.font = "10px Arial";
+        ctx.fillStyle = selectedSkin === id ? PALETTE.accent : ownedSkins.has(id) ? PALETTE.muted : PALETTE.amber;
+        ctx.font = `10px ${HUD_FONT}`;
         ctx.fillText(
             selectedSkin === id ? "EQUIPADA" : ownedSkins.has(id) ? "ADQUIRIDA" : "À VENDA NA LOJA",
             572,
@@ -1236,61 +1537,45 @@ function drawCatalog() {
     });
 
     const closeButton = getCatalogCloseBounds();
-    ctx.fillStyle = "#1bd8ff";
-    ctx.shadowColor = "#1bd8ff";
-    ctx.shadowBlur = 12;
-    roundedRect(closeButton.x, closeButton.y, closeButton.width, closeButton.height, 10);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#061126";
-    ctx.font = "bold 16px Arial";
-    ctx.fillText("VOLTAR AO MENU", canvas.width / 2, closeButton.y + closeButton.height / 2);
+    drawTechButton(closeButton, "VOLTAR AO MENU", false);
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
 }
 
 function drawGameOver() {
-    ctx.fillStyle = "rgba(2, 5, 19, 0.72)";
+    ctx.fillStyle = "rgba(3, 12, 16, 0.84)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "#f4f8ff";
-    ctx.font = "bold 48px Arial";
-    ctx.fillText("FIM DE JOGO", canvas.width / 2, canvas.height / 2 - 75);
-    ctx.fillStyle = "#aabce5";
-    ctx.font = "18px Arial";
+    drawTechPanel(170, 185, 460, 240, PALETTE.amber, "rgba(8, 24, 30, 0.96)");
+    ctx.fillStyle = PALETTE.text;
+    ctx.font = `bold 40px ${HUD_FONT}`;
+    ctx.fillText("SINAL PERDIDO", canvas.width / 2, canvas.height / 2 - 75);
+    ctx.fillStyle = PALETTE.muted;
+    ctx.font = `16px ${HUD_FONT}`;
     ctx.fillText(`Pontuação final: ${String(score).padStart(5, "0")}`, canvas.width / 2, canvas.height / 2 - 25);
 
     const button = getRestartButtonBounds();
-    ctx.fillStyle = "#1bd8ff";
-    ctx.shadowColor = "#1bd8ff";
-    ctx.shadowBlur = 18;
-    roundedRect(button.x, button.y, button.width, button.height, 12);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "#061126";
-    ctx.font = "bold 18px Arial";
-    ctx.fillText("JOGAR NOVAMENTE", button.x + button.width / 2, button.y + button.height / 2);
+    drawTechButton(button, "REINICIAR MISSÃO");
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
 }
 
 function drawShop() {
-    ctx.fillStyle = "rgba(2, 5, 19, 0.86)";
+    ctx.fillStyle = "rgba(3, 12, 16, 0.9)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "#f4f8ff";
-    ctx.shadowColor = "#46e5cf";
+    ctx.fillStyle = PALETTE.text;
+    ctx.shadowColor = PALETTE.accent;
     ctx.shadowBlur = 18;
-    ctx.font = "bold 32px Arial";
-    ctx.fillText("LOJA DE APRIMORAMENTOS", canvas.width / 2, 67);
+    ctx.font = `bold 30px ${HUD_FONT}`;
+    ctx.fillText("BAIA DE EQUIPAMENTOS", canvas.width / 2, 67);
 
     ctx.shadowBlur = 0;
-    ctx.fillStyle = "#aabce5";
-    ctx.font = "14px Arial";
+    ctx.fillStyle = PALETTE.muted;
+    ctx.font = `13px ${HUD_FONT}`;
     ctx.fillText(`Onda ${wave} concluída  ·  Créditos disponíveis: ${score}`, canvas.width / 2, 105);
     ctx.fillText("Clique para comprar ou equipar. Elimine inimigos para ganhar mais créditos.", canvas.width / 2, 126);
 
@@ -1303,12 +1588,14 @@ function drawShop() {
         const soldOut = isItemMaxed(item);
         const canAfford = isOwnedSkin || (score >= cost && !soldOut);
 
-        ctx.fillStyle = "rgba(11, 20, 51, 0.96)";
-        ctx.strokeStyle = canAfford ? item.color : "rgba(143, 169, 217, 0.28)";
-        ctx.lineWidth = 2;
-        roundedRect(card.x, card.y, card.width, card.height, 14);
-        ctx.fill();
-        ctx.stroke();
+        drawTechPanel(
+            card.x,
+            card.y,
+            card.width,
+            card.height,
+            canAfford ? item.color : "rgba(117, 145, 145, 0.48)",
+            "rgba(8, 24, 30, 0.97)"
+        );
 
         if (isSkin) {
             const skin = playerSkins[skinId];
@@ -1323,42 +1610,34 @@ function drawShop() {
         }
 
         ctx.fillStyle = item.color;
-        ctx.font = "bold 13px Arial";
-        ctx.fillText(item.title, card.x + card.width / 2, card.y + 24, card.width - 18);
+        ctx.font = `bold 11px ${HUD_FONT}`;
+        ctx.fillText(item.title, card.x + card.width / 2, card.y + 17, card.width - 18);
 
-        ctx.fillStyle = "#c4d0eb";
-        ctx.font = "11px Arial";
-        ctx.fillText(item.description, card.x + card.width / 2, card.y + 47, card.width - 18);
+        ctx.fillStyle = PALETTE.muted;
+        ctx.font = `10px ${HUD_FONT}`;
+        ctx.fillText(item.description, card.x + card.width / 2, card.y + 36, card.width - 18);
 
         ctx.fillStyle = isOwnedSkin
-            ? (selectedSkin === skinId ? "#46e5cf" : "#ffffff")
+            ? (selectedSkin === skinId ? PALETTE.accent : PALETTE.text)
             : soldOut ? "#7e8aa8" : canAfford ? "#ffffff" : "#ff9ba7";
-        ctx.font = "bold 12px Arial";
+        ctx.font = `bold 11px ${HUD_FONT}`;
         ctx.fillText(
             isOwnedSkin
                 ? (selectedSkin === skinId ? "EQUIPADA" : "CLIQUE PARA EQUIPAR")
                 : soldOut ? "LIMITE ATINGIDO" : `${cost} CRÉDITOS`,
             card.x + card.width / 2,
-            card.y + 70,
+            card.y + 55,
             card.width - 12
         );
-        ctx.fillStyle = "#8fa9d9";
-        ctx.font = "10px Arial";
-        ctx.fillText(getItemLevel(item), card.x + card.width / 2, card.y + 88);
+        ctx.fillStyle = PALETTE.muted;
+        ctx.font = `9px ${HUD_FONT}`;
+        ctx.fillText(getItemLevel(item), card.x + card.width / 2, card.y + 70);
     });
 
     const button = getContinueButtonBounds();
-    ctx.fillStyle = "#1bd8ff";
-    ctx.shadowColor = "#1bd8ff";
-    ctx.shadowBlur = 16;
-    roundedRect(button.x, button.y, button.width, button.height, 12);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "#061126";
-    ctx.font = "bold 17px Arial";
-    ctx.fillText("PRÓXIMA ONDA  ›", canvas.width / 2, button.y + button.height / 2);
-    ctx.fillStyle = "#8fa9d9";
-    ctx.font = "12px Arial";
+    drawTechButton(button, "INICIAR PRÓXIMO SETOR");
+    ctx.fillStyle = PALETTE.muted;
+    ctx.font = `11px ${HUD_FONT}`;
     ctx.fillText("ou pressione ENTER", canvas.width / 2, button.y + button.height + 18);
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
@@ -1383,6 +1662,8 @@ function resetGame() {
     spreadShotLevel = 0;
     speedLevel = 0;
     creditLevel = 0;
+    pulseLevel = 0;
+    missileLevel = 0;
     shieldCharges = 0;
     applySkinStats();
     bullets.length = 0;
@@ -1396,6 +1677,7 @@ function resetGame() {
     player.x = canvas.width / 2 - player.width / 2;
     player.y = canvas.height - 70;
     createEnemies();
+    createObstacles();
 }
 
 //=====================
@@ -1412,6 +1694,7 @@ function draw() {
             drawStartScreen();
         }
     } else {
+        drawObstacles();
         if (Date.now() < playerInvulnerableUntil && Math.floor(Date.now() / 100) % 2 === 0) {
             ctx.globalAlpha = 0.35;
         }
@@ -1426,6 +1709,7 @@ function draw() {
         } else if (shopOpen) {
             drawShop();
         }
+        drawHomeButton();
     }   
 }
 

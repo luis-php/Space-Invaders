@@ -4,38 +4,83 @@
     box-sizing: border-box;
 }
 
+:root {
+    color-scheme: dark;
+    --ui-mint: #75e6ca;
+    --ui-amber: #f2b96f;
+    --ui-ink: #071218;
+    --ui-panel: #0b1c22;
+    --ui-text: #e1f0ee;
+    --ui-muted: #89a6a6;
+}
+
 body {
     min-height: 100vh;
-    background: radial-gradient(ellipse at top, #172453 0%, #080d20 55%, #03050c 100%);
+    background:
+        radial-gradient(ellipse at 50% 4%, rgba(71, 139, 128, 0.22), transparent 38%),
+        linear-gradient(145deg, #101f25 0%, #071116 56%, #03080b 100%);
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 24px;
-    font-family: Arial, sans-serif;
-    color: #f4f8ff;
+    font-family: "Bahnschrift", "Arial Narrow", "Trebuchet MS", sans-serif;
+    color: var(--ui-text);
 }
 
 .container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 13px;
     width: min(100%, 840px);
 }
 
 h1 {
-    color: #f4f8ff;
-    font-size: clamp(1.5rem, 4vw, 2.25rem);
-    letter-spacing: 0.12em;
-    text-shadow: 0 0 20px rgba(70, 229, 207, 0.45);
+    color: var(--ui-text);
+    font-size: clamp(1.25rem, 3.6vw, 1.8rem);
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-shadow: 0 0 24px rgba(117, 230, 202, 0.3);
 }
 
 .game-container {
     width: 100%;
     overflow: hidden;
-    border: 1px solid rgba(112, 183, 255, 0.42);
-    border-radius: 10px;
-    box-shadow: 0 18px 55px rgba(0, 0, 0, 0.45), 0 0 28px rgba(27, 216, 255, 0.12);
+    border: 1px solid rgba(117, 230, 202, 0.42);
+    border-radius: 4px;
+    background: #050e12;
+    box-shadow:
+        0 18px 55px rgba(0, 0, 0, 0.55),
+        0 0 25px rgba(117, 230, 202, 0.1),
+        inset 0 0 0 3px rgba(117, 230, 202, 0.045);
+    position: relative;
+}
+
+.game-container::before,
+.game-container::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    pointer-events: none;
+    background: var(--ui-mint);
+    opacity: 0.7;
+}
+
+.game-container::before {
+    top: 8px;
+    left: 8px;
+    width: 46px;
+    height: 1px;
+    box-shadow: 0 7px 0 rgba(117, 230, 202, 0.35);
+}
+
+.game-container::after {
+    right: 8px;
+    bottom: 8px;
+    width: 46px;
+    height: 1px;
+    box-shadow: 0 -7px 0 rgba(117, 230, 202, 0.35);
 }
 
 canvas {
@@ -44,11 +89,27 @@ canvas {
     height: auto;
     aspect-ratio: 4 / 3;
     cursor: pointer;
+    touch-action: manipulation;
 }
 
 .controls-hint {
-    color: #9eafd5;
-    font-size: 0.9rem;
-    letter-spacing: 0.02em;
+    color: var(--ui-muted);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
     text-align: center;
+    text-transform: uppercase;
+}
+
+@media (max-width: 600px) {
+    body {
+        padding: 12px;
+    }
+
+    .container {
+        gap: 10px;
+    }
+
+    .controls-hint {
+        font-size: 0.65rem;
+    }
 }
