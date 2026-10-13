@@ -23,7 +23,7 @@ body {
 canvas{
     display: block;
    image-rendering: pixelated;
-   background-image: url('https://i.ibb.co/0j1Z5kM/Background.png');
+   background-image: url('.img/space-background.gif');
     border: 1px solid #ccc;
     background-size: cover;
     background-position: center;
