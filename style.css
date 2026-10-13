@@ -5,27 +5,50 @@
 }
 
 body {
-    background-color: #f5f5f5;
+    min-height: 100vh;
+    background: radial-gradient(ellipse at top, #172453 0%, #080d20 55%, #03050c 100%);
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-
+    padding: 24px;
     font-family: Arial, sans-serif;
-    color: #333;
+    color: #f4f8ff;
 }
 
-.gamecontainer{
-    border: 2px solid #ccc;
-    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    width: min(100%, 840px);
 }
 
-canvas{
+h1 {
+    color: #f4f8ff;
+    font-size: clamp(1.5rem, 4vw, 2.25rem);
+    letter-spacing: 0.12em;
+    text-shadow: 0 0 20px rgba(70, 229, 207, 0.45);
+}
+
+.game-container {
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid rgba(112, 183, 255, 0.42);
+    border-radius: 10px;
+    box-shadow: 0 18px 55px rgba(0, 0, 0, 0.45), 0 0 28px rgba(27, 216, 255, 0.12);
+}
+
+canvas {
     display: block;
-   image-rendering: pixelated;
-   background-image: url('.img/space-background.gif');
-    border: 1px solid #ccc;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    cursor: pointer;
+}
+
+.controls-hint {
+    color: #9eafd5;
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
+    text-align: center;
 }
