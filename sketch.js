@@ -142,6 +142,27 @@ const ENEMY_STYLES = {
     drone: { color: "#62f5e1", core: "#d7fff3" },
     striker: { color: "#9c7cff", core: "#e2ddff" },
 };
+const playerSprites = {};
+const enemySprites = {};
+const spriteSources = {
+    player: "assets/player.svg",
+    neon: "assets/player-neon.svg",
+    crimson: "assets/player-crimson.svg",
+    gold: "assets/player-gold.svg",
+    scout: "assets/scout.svg",
+    bomber: "assets/bomber.svg",
+    drone: "assets/drone.svg",
+    striker: "assets/striker.svg",
+};
+Object.entries(spriteSources).forEach(([name, source]) => {
+    const image = new Image();
+    image.src = source;
+    if (name === "player" || name === "neon" || name === "crimson" || name === "gold") {
+        playerSprites[name] = image;
+    } else {
+        enemySprites[name] = image;
+    }
+});
 
 let enemyDirection = 1;
 let enemySpeed = 1;
@@ -863,6 +884,15 @@ function removeDestroyedObstacles() {
 //=====================
 
 function drawPlayer() {
+    const sprite = playerSprites[selectedSkin] || playerSprites.player;
+    const spriteReady = sprite && sprite.complete && sprite.naturalWidth > 0;
+    if (spriteReady) {
+        ctx.save();
+        ctx.shadowColor = playerSkins[selectedSkin].hull;
+        ctx.shadowBlur = 12;
+        ctx.drawImage(sprite, player.x - 4, player.y - 7, player.width + 8, player.height + 16);
+        ctx.restore();
+    } else {
     ctx.save();
     ctx.translate(player.x, player.y);
 
@@ -976,6 +1006,7 @@ function drawPlayer() {
         ctx.fill();
     }
     ctx.restore();
+    }
 
     if (shieldCharges > 0 || Date.now() < playerInvulnerableUntil) {
         ctx.save();
@@ -1203,6 +1234,14 @@ function drawEnemies() {
         const centerX = enemy.width / 2;
         const centerY = enemy.height / 2;
         const style = ENEMY_STYLES[enemy.type];
+        const sprite = enemySprites[enemy.type];
+        if (sprite && sprite.complete && sprite.naturalWidth > 0) {
+            ctx.shadowColor = style.color;
+            ctx.shadowBlur = 12;
+            ctx.drawImage(sprite, -4, -7, enemy.width + 8, enemy.height + 14);
+            ctx.restore();
+            return;
+        }
 
         ctx.shadowColor = style.color;
         ctx.shadowBlur = 8;
