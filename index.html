@@ -3,18 +3,29 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Space Invaders</title>
+        <title>Void Frontier · Space Invaders</title>
 
         <link rel="stylesheet" href="style.css">
     </head>  
     <body>
-       <div class="container">
-            <h1>Space Invaders</h1>
+       <main class="container">
+            <header class="brand">
+                <span class="brand-mark">◈</span>
+                <div>
+                    <p class="eyebrow">FRONTIER DEFENSE NETWORK</p>
+                    <h1>VOID <strong>FRONTIER</strong></h1>
+                </div>
+                <span class="status"><i></i> ONLINE</span>
+            </header>
             <div class="game-container">
                 <canvas id="gameCanvas" width="800" height="600"></canvas>
             </div>
-            <p class="controls-hint">Setas ou W A S D para mover · Espaço para atirar</p>
-        </div>
+            <footer class="controls-hint">
+                <span><b>W A S D</b> / <b>SETAS</b> mover</span>
+                <span><b>ESPAÇO</b> disparar</span>
+                <span><b>ESC</b> retornar</span>
+            </footer>
+        </main>
 
         <script src="sketch.js"></script>
     </body>

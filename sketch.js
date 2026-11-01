@@ -5,19 +5,21 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const spaceGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-spaceGradient.addColorStop(0, "#10232c");
-spaceGradient.addColorStop(0.48, "#081820");
-spaceGradient.addColorStop(1, "#040b10");
+spaceGradient.addColorStop(0, "#15102e");
+spaceGradient.addColorStop(0.5, "#0b0b20");
+spaceGradient.addColorStop(1, "#050512");
 const HUD_FONT = '"Bahnschrift", "Arial Narrow", "Trebuchet MS", sans-serif';
 const PALETTE = {
-    accent: "#75e6ca",
-    accentBright: "#b2ffe9",
-    amber: "#f2b96f",
-    text: "#e1f0ee",
-    muted: "#89a6a6",
-    panel: "rgba(8, 24, 30, 0.94)",
-    panelLight: "rgba(15, 39, 45, 0.96)",
-    line: "rgba(117, 230, 202, 0.38)",
+    accent: "#62f5e1",
+    accentBright: "#d4fff8",
+    amber: "#ffb86b",
+    violet: "#9c7cff",
+    pink: "#ff6ca8",
+    text: "#f1f0ff",
+    muted: "#918eaf",
+    panel: "rgba(15, 14, 38, 0.94)",
+    panelLight: "rgba(27, 24, 59, 0.96)",
+    line: "rgba(156, 124, 255, 0.42)",
 };
 
 const keys = {};
@@ -58,43 +60,43 @@ const stars = Array.from({ length: 64 }, () => ({
 //=====================
 
 const player = {
-    width: 50,
-    height: 30,
+    width: 58,
+    height: 34,
     speed: 5,
     x: canvas.width / 2 - 25,
     y: canvas.height - 70,
 };
 const playerSkins = {
     default: {
-        name: "NAVE PADRÃO",
+        name: "NAVE VECTOR",
         style: "fighter",
-        hull: "#72e3d0",
-        trim: "#d6fff4",
-        wing: "#f2b96f",
-        engine: "#ffe1a0",
+        hull: "#62f5e1",
+        trim: "#d4fff8",
+        wing: "#9c7cff",
+        engine: "#ffb86b",
     },
     neon: {
         name: "NEON",
         style: "sleek",
-        hull: "#83d9d0",
-        trim: "#dcfff6",
-        wing: "#53a7aa",
-        engine: "#b9ffe8",
+        hull: "#75a7ff",
+        trim: "#e1e4ff",
+        wing: "#9c7cff",
+        engine: "#62f5e1",
     },
     crimson: {
         name: "CRIMSON",
         style: "heavy",
-        hull: "#df816d",
-        trim: "#ffe1bd",
-        wing: "#a9584f",
-        engine: "#ffd18d",
+        hull: "#ff6ca8",
+        trim: "#ffe0ed",
+        wing: "#b84478",
+        engine: "#ffb86b",
     },
     gold: {
         name: "ORO",
         style: "royal",
-        hull: "#e5bd72",
+        hull: "#ffb86b",
         trim: "#fff0c4",
-        wing: "#a88b53",
+        wing: "#d77a63",
         engine: "#ffe3a3",
     },
 };
@@ -112,17 +114,17 @@ const obstacles = [];
 const bulletSpeed = 10;
 let shotSequence = 0;
 const shopItems = [
-    { id: "rapid", title: "TIRO RÁPIDO", description: "Dispare com mais frequência", baseCost: 100, color: "#75e6ca" },
+    { id: "rapid", title: "TIRO RÁPIDO", description: "Dispare com mais frequência", baseCost: 100, color: "#62f5e1" },
     { id: "spread", title: "TIRO TRIPLO", description: "Lance três projéteis por vez", baseCost: 150, color: "#a9b9e0" },
     { id: "life", title: "NAVE EXTRA", description: "Recupere uma vida", baseCost: 200, color: "#ef977c" },
     { id: "shield", title: "ESCUDO", description: "Bloqueia um acerto", baseCost: 160, color: "#82c6dc" },
-    { id: "speed", title: "MOTOR TURBO", description: "Aumenta sua velocidade", baseCost: 130, color: "#f2b96f" },
+    { id: "speed", title: "MOTOR TURBO", description: "Aumenta sua velocidade", baseCost: 130, color: "#ffb86b" },
     { id: "credits", title: "BÔNUS DE CRÉDITOS", description: "Mais créditos por inimigo", baseCost: 180, color: "#a9d79b" },
     { id: "skin-neon", title: "SKIN NEON", description: "Nave ágil, visual neon", baseCost: 220, color: "#83d9d0" },
     { id: "skin-crimson", title: "SKIN CRIMSON", description: "Nave pesada, visual rubi", baseCost: 260, color: "#df816d" },
     { id: "skin-gold", title: "SKIN ORO", description: "Nave real, visual dourado", baseCost: 300, color: "#e5bd72" },
-    { id: "pulse", title: "CANHÃO DE PULSO", description: "Pulso pesado perfurante", baseCost: 240, color: "#75e6ca" },
-    { id: "missile", title: "MÍSSIL GUIADO", description: "Projétil que busca alvos", baseCost: 280, color: "#f2b96f" },
+    { id: "pulse", title: "CANHÃO DE PULSO", description: "Pulso pesado perfurante", baseCost: 240, color: "#62f5e1" },
+    { id: "missile", title: "MÍSSIL GUIADO", description: "Projétil que busca alvos", baseCost: 280, color: "#ffb86b" },
 ];
 
 //=====================
@@ -135,10 +137,10 @@ const ENEMY_COLS = 8;
 const ENEMY_WIDTH = 40;
 const ENEMY_TYPES = ["scout", "bomber", "drone", "striker"];
 const ENEMY_STYLES = {
-    scout: { color: "#ef977c", core: "#ffe5b2" },
-    bomber: { color: "#e0b46a", core: "#fff0c8" },
-    drone: { color: "#72d7c3", core: "#d7fff3" },
-    striker: { color: "#9eacdb", core: "#e2e9ff" },
+    scout: { color: "#ff6ca8", core: "#ffe0ed" },
+    bomber: { color: "#ffb86b", core: "#fff0c8" },
+    drone: { color: "#62f5e1", core: "#d7fff3" },
+    striker: { color: "#9c7cff", core: "#e2ddff" },
 };
 
 let enemyDirection = 1;
@@ -1008,7 +1010,7 @@ function drawObstacles() {
         ctx.shadowColor = integrity > 0.5 ? "#68cbbb" : "#e5a66a";
         ctx.shadowBlur = 9;
         ctx.fillStyle = integrity > 0.5 ? "#294d4d" : "#55443a";
-        ctx.strokeStyle = integrity > 0.5 ? "#75e6ca" : "#f2b96f";
+        ctx.strokeStyle = integrity > 0.5 ? PALETTE.accent : PALETTE.amber;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(5, 2);
@@ -1085,7 +1087,7 @@ function drawBullets() {
         ctx.rotate(bullet.angle || 0);
 
         if (bullet.type === "orb") {
-            ctx.shadowColor = "#f2b96f";
+            ctx.shadowColor = PALETTE.amber;
             ctx.shadowBlur = 9;
             ctx.fillStyle = "#ad654e";
             ctx.beginPath();
@@ -1163,18 +1165,31 @@ function drawBackground() {
         }
 
         ctx.globalAlpha = star.opacity * (0.75 + Math.sin(Date.now() / 500 + star.x) * 0.25);
-        ctx.fillStyle = "#c3eee5";
+        ctx.fillStyle = "#d8d2ff";
         ctx.fillRect(star.x, star.y, star.size, star.size);
     }
     ctx.globalAlpha = 1;
 
-    ctx.strokeStyle = "rgba(117, 230, 202, 0.035)";
+    ctx.strokeStyle = "rgba(156, 124, 255, 0.075)";
     ctx.lineWidth = 1;
-    for (let y = 120; y < canvas.height; y += 80) {
+    for (let y = 96; y < canvas.height; y += 48) {
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(canvas.width, y);
         ctx.stroke();
+    }
+    for (let x = 16; x < canvas.width; x += 48) {
+        ctx.beginPath();
+        ctx.moveTo(x, 86);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+
+    ctx.fillStyle = "rgba(98, 245, 225, 0.025)";
+    ctx.fillRect(0, 86, canvas.width, 2);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.018)";
+    for (let y = 0; y < canvas.height; y += 5) {
+        ctx.fillRect(0, y, canvas.width, 1);
     }
 }
 
@@ -1321,15 +1336,15 @@ function drawEnemies() {
 
 function drawHUD() {
     ctx.save();
-    drawTechPanel(18, 16, canvas.width - 36, 58, PALETTE.accent);
+    drawTechPanel(18, 16, canvas.width - 36, 58, PALETTE.violet, "rgba(12, 11, 31, 0.94)");
 
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.font = `10px ${HUD_FONT}`;
+    ctx.font = `9px ${HUD_FONT}`;
     ctx.fillStyle = PALETTE.muted;
-    ctx.fillText("CRÉDITOS", 38, 33);
-    ctx.fillText("SETOR / ONDA", canvas.width / 2 - 42, 33);
-    ctx.fillText("CASCO", canvas.width - 205, 33);
+    ctx.fillText("SCORE", 38, 32);
+    ctx.fillText("WAVE", canvas.width / 2 - 42, 32);
+    ctx.fillText("HULL", canvas.width - 205, 32);
 
     ctx.font = `bold 19px ${HUD_FONT}`;
     ctx.fillStyle = PALETTE.text;
@@ -1338,7 +1353,7 @@ function drawHUD() {
 
     for (let i = 0; i < MAX_LIVES; i++) {
         const x = canvas.width - 205 + i * 22;
-        ctx.fillStyle = i < lives ? PALETTE.accent : "rgba(143, 169, 169, 0.2)";
+        ctx.fillStyle = i < lives ? PALETTE.accent : "rgba(145, 142, 175, 0.2)";
         ctx.shadowColor = i < lives ? PALETTE.accent : "transparent";
         ctx.shadowBlur = i < lives ? 8 : 0;
         ctx.beginPath();
@@ -1352,7 +1367,7 @@ function drawHUD() {
     ctx.shadowBlur = 0;
     ctx.textAlign = "center";
     ctx.font = `10px ${HUD_FONT}`;
-    ctx.fillStyle = shieldCharges > 0 ? "#82c6dc" : "#617779";
+    ctx.fillStyle = shieldCharges > 0 ? PALETTE.accent : "#5c5878";
     ctx.fillText(`SHIELD ${shieldCharges}`, canvas.width - 282, 51);
     ctx.textAlign = "left";
     ctx.restore();
@@ -1435,13 +1450,13 @@ function drawStartScreen() {
     ctx.shadowBlur = 20;
     ctx.fillStyle = PALETTE.text;
     ctx.font = `bold 48px ${HUD_FONT}`;
-    ctx.fillText("SPACE INVADERS", canvas.width / 2, canvas.height / 2 - 94);
+    ctx.fillText("VOID FRONTIER", canvas.width / 2, canvas.height / 2 - 94);
     ctx.shadowBlur = 0;
     ctx.fillStyle = PALETTE.accent;
     ctx.fillRect(canvas.width / 2 - 72, canvas.height / 2 - 61, 144, 2);
     ctx.fillStyle = PALETTE.muted;
     ctx.font = `16px ${HUD_FONT}`;
-    ctx.fillText("Defenda a galáxia e sobreviva às ondas inimigas", canvas.width / 2, canvas.height / 2 - 43);
+    ctx.fillText("Defenda a fronteira e sobreviva às ondas inimigas", canvas.width / 2, canvas.height / 2 - 43);
     ctx.font = `13px ${HUD_FONT}`;
     ctx.fillStyle = PALETTE.text;
     ctx.fillText("Mova: setas ou W A S D     Atire: ESPAÇO", canvas.width / 2, canvas.height / 2 + 20);
